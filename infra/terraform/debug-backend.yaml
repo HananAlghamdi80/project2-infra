@@ -1,0 +1,6 @@
+properties:
+  template:
+    containers:
+      - name: backend
+        image: p2acr.azurecr.io/backend:1.0
+
