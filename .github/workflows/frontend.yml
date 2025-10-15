@@ -1,0 +1,51 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ "main", "test-cicd"  ]
+    paths:
+      - "apps/frontend/**"
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies and build frontend
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Analyze frontend code with SonarCloud
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=HananAlghamdi80_project2hanan-frontend
+            -Dsonar.organization=hanan-projects
+            -Dsonar.host.url=https://sonarcloud.io
+
+      - name: Azure Login using credentials JSON
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and push image to ACR
+        run: |
+          az acr login --name p2acrhanan123
+          docker build -t p2acrhanan123.azurecr.io/frontend:latest ./apps/frontend
+          docker push p2acrhanan123.azurecr.io/frontend:latest
+
+      - name: Deploy to Azure Container App
+        run: |
+          az containerapp update -n p2-frontend -g p2-rg --image p2acrhanan123.azurecr.io/frontend:latest
